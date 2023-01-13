@@ -1,4 +1,4 @@
-FROM ubi:8
+FROM registry.access.redhat.com/ubi8/ubi
 RUN dnf install -y platform-python-pip python3 && \
   pip3 install prometheus_client
 
