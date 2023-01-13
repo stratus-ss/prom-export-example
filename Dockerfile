@@ -1,4 +1,4 @@
-FROM centos:8
+FROM ubi:8
 RUN dnf install -y platform-python-pip python3 && \
   pip3 install prometheus_client
 
