@@ -19,7 +19,7 @@ if __name__ == '__main__':
    gauge = prom.Gauge('python_my_gauge', 'This is my gauge')
    histogram = prom.Histogram('python_my_histogram', 'This is my histogram')
    summary = prom.Summary('python_my_summary', 'This is my summary')
-   prom.start_http_server(8080)
+   prom.start_http_server(8090)
 
    while True:
        counter.inc(random.random())

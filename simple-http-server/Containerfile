@@ -1,0 +1,14 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+
+RUN microdnf install --nodocs -y socat iproute
+
+RUN mkdir /www/ && chmod 770 /www/ && mkdir /metrics && chmod 770 /metrics
+
+ADD srv.sh /www/srv.sh
+ADD exporter_lib.sh /www/exporter_lib.sh
+
+EXPOSE 8080
+
+USER 1984
+
+CMD socat TCP4-LISTEN:8080,fork EXEC:/www/srv.sh

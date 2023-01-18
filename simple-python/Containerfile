@@ -4,5 +4,5 @@ RUN dnf install -y platform-python-pip python3 && \
 
 RUN mkdir -p /app
 COPY client.py /app
-EXPOSE 8080
+EXPOSE 8090
 CMD ["python3", "/app/client.py"]
