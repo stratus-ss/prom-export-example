@@ -5,8 +5,10 @@ url="${url% HTTP/*}"
 query="${url#*\?}"
 url="${url%%\?*}"
 export metrics_file="/metrics/app.prom"
+temp_metrics_file="/tmp/metrics_temp.prom"
 
-source /www/exporter_lib.sh
+source /www/exporter_counter.sh
+source /www/exporter_gauge.sh
 
 echo -e "HTTP/1.1 200 OK\r"
 echo -e "Content-Type: text/plain\r"
@@ -20,7 +22,6 @@ if [ "$query" == "/demo" ] ; then
   # for i in marge.simpson homer.simpson selma.bouvier patty.bouvier ; do
   echo "marge.simpson homer.simpson selma.bouvier patty.bouvier" | tr " " "\n" | grep -v "$(echo $HOSTNAME | cut -f1 -d'-')" | while read i ; do
     need_export=False
-    echo -n "$DEMO_FROM -> $i : "
     # in theory metric should look like simpson_connect_to_blah 1
     # some metrics may have comments so skip those
     if [ -f "${metrics_file}" ];
@@ -50,9 +51,15 @@ if [ "$query" == "/demo" ] ; then
 
     
     # Run the curl test
-    curl -I -s --connect-timeout 1 $i:8080  >/dev/null && success="OK"  || success="FAIL"
+    curl_stat_array=( $(curl -w '\nLookup_time:\t%{time_namelookup}\nConnect_time:\t%{time_connect}\nStartXfer_time:\t%{time_starttransfer}\n\nTotal_time:\t%{time_total}\n' -s --connect-timeout 1 $i:8080   && echo "OK" > /tmp/success  || echo "FAIL" > /tmp/success))
+    success=$(cat /tmp/success)
+    echo -n "$DEMO_FROM -> $i : "
     echo ${success}
-    
+    exporter_add_gauge simpson_${i}_${curl_stat_array[0]%% *} gauge "Name Resolution Time" ${curl_stat_array[1]## *} 
+    exporter_add_gauge simpson_${i}_${curl_stat_array[2]%% *} gauge "Time to connect to remote host" ${curl_stat_array[3]## *} 
+    exporter_add_gauge simpson_${i}_${curl_stat_array[4]%% *} gauge "Transfer Time" ${curl_stat_array[5]## *} 
+    exporter_add_gauge simpson_${i}_${curl_stat_array[6]%% *} gauge "Total Time Taken" ${curl_stat_array[7]## *} 
+    exporter_show_gauge > ${temp_metrics_file}
     # If the curl is successful
     if [ ${success} == "OK" ]; 
       then 
@@ -63,37 +70,41 @@ if [ "$query" == "/demo" ] ; then
                if [ "${need_export}" == "True" ]; 
                 then
                 # run the export commands and dump the results to a file
-                 exporter_add_metric simpson_connect_to_${i} counter "Successful connections to ${i}" ${current_success};
-                 exporter_show_metrics > ${metrics_file}
+                 exporter_add_counter simpson_connect_to_${i} counter "Successful connections to ${i}" ${current_success};
+                 exporter_show_counter > ${metrics_file}
                else
                  # otherwise, replace the line so that the count has incremented by 1
                  sed -i "s/simpson_connect_to_${i} [0-9]\+/simpson_connect_to_${i} ${current_success}/g" "${metrics_file}"
                fi
            # If we have no file in the first place, we need to create it
            else
-               exporter_add_metric simpson_connect_to_${i} counter "Successful connections to ${i}" ${current_success};
-               exporter_show_metrics > ${metrics_file}
+               exporter_add_counter simpson_connect_to_${i} counter "Successful connections to ${i}" ${current_success};
+               exporter_show_counter > ${metrics_file}
            fi
       else
            if [ -f "${metrics_file}" ];
              then
                if [ "${need_export}" == "True" ]; 
                 then
-                 exporter_add_metric simpson_failed_connection_to_${i} counter "Unscuccessful connections to ${i}" ${current_failure};
-                 exporter_show_metrics > ${metrics_file}
+                 exporter_add_counter simpson_failed_connection_to_${i} counter "Unscuccessful connections to ${i}" ${current_failure};
+                 exporter_show_counter > ${metrics_file}
                else
                  sed -i "s/simpson_failed_connection_to_${i} [0-9]\+/simpson_failed_connection_to_${i} ${current_failure}/g" "${metrics_file}"
               fi
            else
-               exporter_add_metric simpson_failed_connection_to_${i} counter "Unsuccessful connections to ${i}" ${current_failure}; 
-               exporter_show_metrics > ${metrics_file}
+               exporter_add_counter simpson_failed_connection_to_${i} counter "Unsuccessful connections to ${i}" ${current_failure}; 
+               exporter_show_counter > ${metrics_file}
            fi
- 
       fi 
     sleep 1
     done; 
   exit;
 fi;
+
+if [ "$query" == "/metrics" ] ; then
+    cat ${temp_metrics_file}
+    cat ${metrics_file}
+fi
 
 echo -e "\n## request"
 echo $request

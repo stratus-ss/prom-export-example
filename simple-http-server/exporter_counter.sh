@@ -5,9 +5,9 @@
 #     If present, will be added to all metric names
 #     Example: metrics_prefix="my_exporter_prefix"
 #
-#   - metrics_array (array, optional, default: empty array)
+#   - counter_array (array, optional, default: empty array)
 #     Added metrics will be appended to this initial array
-#     Example: metrics_array=("my_metric1 1.31" "my_metric2 90.0")
+#     Example: counter_array=("my_metric1 1.31" "my_metric2 90.0")
 
 # exporter_add_metric example:
 #   exporter_add_metric remote_fetched gauge "Number of remote backups successfully fetched via scp" 1.0 "remote_host:$remote_host;"
@@ -43,9 +43,9 @@
 #
 #   Note: $6 and $7 can be repeated several times, with different labels.
 #
-function exporter_add_metric() {
-	if [ -z "${metrics_array+x}" ]; then
-	  metrics_array=()
+function exporter_add_counter() {
+	if [ -z "${counter_array+x}" ]; then
+	  counter_array=()
 	fi
 	if [ -z "${metrics_prefix}" ]; then 
 		local metric_name="${1}"
@@ -56,11 +56,11 @@ function exporter_add_metric() {
 	local metric_description=$3
 	
 	if [ -n "$metric_description" ]; then
-		metrics_array+=("# HELP $metric_name $metric_description")
+		counter_array+=("# HELP $metric_name $metric_description")
 	fi
 	# silently skip unrecognized $metric_type
-	if [ "$metric_type" == "gauge" -o "$metric_type" == "counter" ]; then
-		metrics_array+=("# TYPE $metric_name $metric_type")
+	if [ "$metric_type" == "counter" ]; then
+		counter_array+=("# TYPE $metric_name $metric_type")
 	fi
 	shift 3
 	while (( "$#" )); do
@@ -79,13 +79,17 @@ function exporter_add_metric() {
 			done
 			local metric_labels_raw_line="${metric_labels[@]}"
 			local metric_labels_line="${metric_labels_raw_line// /,}"
-			metrics_array+=("$metric_name{$metric_labels_line} $metric_value")
+			counter_array+=("$metric_name{$metric_labels_line} $metric_value")
 		else
-			metrics_array+=("$metric_name $metric_value")
+			counter_array+=("$metric_name $metric_value")
 		fi
 	done
 }
 
-function exporter_show_metrics() {
-	printf "%s\n" "${metrics_array[@]}"
+function exporter_show_counter() {
+	printf "%s\n" "${counter_array[@]}"
+}
+
+function exporter_clear_metrics() {
+       counter_array=()
 }

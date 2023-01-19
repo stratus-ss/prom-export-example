@@ -5,7 +5,8 @@ RUN microdnf install --nodocs -y socat iproute
 RUN mkdir /www/ && chmod 770 /www/ && mkdir /metrics && chmod 770 /metrics
 
 ADD srv.sh /www/srv.sh
-ADD exporter_lib.sh /www/exporter_lib.sh
+ADD exporter_counter.sh /www/exporter_lib.sh
+ADD exporter_gauge.sh /www/exporter_lib.sh
 
 EXPOSE 8080
 
