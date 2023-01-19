@@ -51,7 +51,8 @@ if [ "$query" == "/demo" ] ; then
 
     
     # Run the curl test
-    curl_stat_array=( $(curl -w '\nLookup_time:\t%{time_namelookup}\nConnect_time:\t%{time_connect}\nStartXfer_time:\t%{time_starttransfer}\n\nTotal_time:\t%{time_total}\n' -s --connect-timeout 1 $i:8080   && echo "OK" > /tmp/success  || echo "FAIL" > /tmp/success))
+    # we don't care about the response so sending it to /dev/null
+    curl_stat_array=( $(curl -w '\nLookup_time:\t%{time_namelookup}\nConnect_time:\t%{time_connect}\nStartXfer_time:\t%{time_starttransfer}\n\nTotal_time:\t%{time_total}\n' -s --connect-timeout 1 $i:8080 -o /dev/null   && echo "OK" > /tmp/success  || echo "FAIL" > /tmp/success))
     success=$(cat /tmp/success)
     echo -n "$DEMO_FROM -> $i : "
     echo ${success}
