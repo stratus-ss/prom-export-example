@@ -96,7 +96,6 @@ if [ "$query" == "/demo" ] ; then
                exporter_show_counter > ${metrics_file}
            fi
       fi 
-    sleep 1
     done; 
   exit;
 fi;
