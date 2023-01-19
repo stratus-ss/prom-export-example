@@ -1,0 +1,22 @@
+# Default values for sample-app2.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# These are my variable additions
+networkPolicy:
+  allowIngress: true
+  denyAll: true
+  allowSameNS: false
+  allowFrom: false
+  denyNSName: 'simpson'
+
+nameOverride: "homer"
+fullnameOverride: "homer"
+
+ingress:
+  enabled: true
+  hosts:
+    - host: homer-simpson.apps.ocp.stratus.lab
+      paths:
+        - path: /
+          pathType: ImplementationSpecific

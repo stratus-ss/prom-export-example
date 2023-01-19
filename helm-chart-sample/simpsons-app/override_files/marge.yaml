@@ -1,0 +1,23 @@
+# These are my variable additions
+networkPolicy:
+  denyAll: false
+  allowSameNS: true
+  allowFrom: true
+  allowSameNSName: 'simpson'
+  allowFromNS: 'bouviers'
+  allowToNS: 'marge'
+  allowToLabel: 
+    'app.kubernetes.io/instance': marge
+  allowFromLabel: 
+    'kubernetes.io/metadata.name': bouvier
+
+nameOverride: "marge"
+fullnameOverride: "marge"
+
+ingress:
+  enabled: true
+  hosts:
+    - host: marge-simpson.apps.ocp.stratus.lab
+      paths:
+        - path: /
+          pathType: ImplementationSpecific

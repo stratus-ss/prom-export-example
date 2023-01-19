@@ -1,0 +1,15 @@
+
+{{- if .Values.networkPolicy.allowSameNS }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: {{ .Values.networkPolicy.allowSameNSName }}
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - podSelector: {}
+  policyTypes:
+  - Ingress
+{{- end }}

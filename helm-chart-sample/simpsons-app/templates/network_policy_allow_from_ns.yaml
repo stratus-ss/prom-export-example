@@ -1,0 +1,22 @@
+{{ if .Values.networkPolicy.allowFrom }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-{{ .Values.networkPolicy.allowFromNS }}-to-{{ .Values.networkPolicy.allowToNS }}
+  namespace: {{ .Values.networkPolicy.denyNSName }}
+spec:
+  podSelector:
+{{- with .Values.networkPolicy.allowToLabel }}
+    matchLabels:
+{{ toYaml . |indent 6 }}
+{{- end }}
+  ingress:
+  - from:
+    - namespaceSelector:
+{{- with .Values.networkPolicy.allowFromLabel }}
+        matchLabels:
+{{ toYaml . | indent 10}}
+{{- end }}
+  policyTypes:
+  - Ingress
+{{- end }}
