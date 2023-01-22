@@ -1,8 +1,10 @@
-FROM registry.access.redhat.com/ubi8/ubi
+FROM registry.access.redhat.com/ubi9/ubi
 RUN dnf install -y platform-python-pip python3 && \
-  pip3 install prometheus_client
+    pip install prometheus_client cherrypy && \
+    dnf clean all
 
 RUN mkdir -p /app
-COPY client.py /app
-EXPOSE 8090
-CMD ["python3", "/app/client.py"]
+COPY cherrypy_server.py /app
+EXPOSE 8080
+ENTRYPOINT ["python3"]
+CMD ["/app/cherrypy_server.py"]

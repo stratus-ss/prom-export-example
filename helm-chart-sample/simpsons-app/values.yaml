@@ -19,15 +19,19 @@ networkPolicy:
     'app.kubernetes.io/instance': marge
   allowFromLabel: 
     'kubernetes.io/metadata.name': bouvier
-
+arguments: 
+  url1: 'http://homer-simpson.apps.ocp.stratus.lab'
+  url2: 'http://marge-simpson.apps.ocp.stratus.lab'
+  url3: 'http://selma-bouvier.apps.ocp.stratus.lab'
+  url4: 'http://patty-bouvier.apps.ocp.stratus.lab'
 
 replicaCount: 1
 
 image:
-  repository: quay.io/sovens/sre-sample-app/simple-http-server
+  repository: quay.io/sovens/sre-sample-app/simple-cherrypy-server
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "dev-0.11"
+  tag: "0.1"
 
 imagePullSecrets: []
 nameOverride: "example"
