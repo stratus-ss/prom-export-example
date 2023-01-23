@@ -47,7 +47,7 @@ class StartWebserver(object):
     @cherrypy.expose
     def demo(self):
         testing_results = ''
-        hostname = socket.gethostname()#.split('-')[0]
+        hostname = socket.gethostname().split('-')[0]
         for single_url in options.urls:
             gauge_variable_name = "%s_to_%s_response_time" % (hostname.split('-')[0], single_url[0].split("//")[1].split('.')[0].replace('-','_'))
             # This is a gnarly work around to set a dynamic name for the response time    
