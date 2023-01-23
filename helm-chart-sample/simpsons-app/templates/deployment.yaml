@@ -36,8 +36,11 @@ spec:
         - name: {{ include "simpsons-app.name" . }}
           command: ["python3", "/app/cherrypy_server.py"]
           args: 
-          {{- range $key, $value := .Values.arguments }}
+          {{- range $key, $value := .Values.urlArguments }}
             - --url={{ $value }}
+          {{- end }}
+          {{- if .Values.serviceArgs }}
+            - --service
           {{- end }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}

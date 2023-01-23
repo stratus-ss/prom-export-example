@@ -24,9 +24,9 @@ def add_to_dictionary(dictionary, endpoint, component, value=1, overwrite=True):
         dictionary[endpoint] = {component: value}
 
 
-def test_endpoint(incoming_url, port=8080):
+def test_endpoint(incoming_url, port='8080'):
     if options.service:
-        final_endpoint = incoming_url + ":" + port
+        final_endpoint = "http://" + incoming_url + ":" + port
     else:
         final_endpoint = incoming_url
     response = requests.request(method='GET', url=final_endpoint)
@@ -49,7 +49,12 @@ class StartWebserver(object):
         testing_results = ''
         hostname = socket.gethostname().split('-')[0]
         for single_url in options.urls:
-            gauge_variable_name = "%s_to_%s_response_time" % (hostname.split('-')[0], single_url[0].split("//")[1].split('.')[0].replace('-','_'))
+            # metric names cannot use '-' or '/' in the name so we need to remove them
+            if "http" in single_url[0]:
+                metric_name = single_url[0].split("//")[1].split('.')[0].replace('-','_')
+            else:
+                metric_name = single_url[0].replace('-','_').replace(".", "_")
+            gauge_variable_name = "%s_to_%s_response_time" % (hostname.split('-')[0], metric_name)
             # This is a gnarly work around to set a dynamic name for the response time    
             exec(f'{gauge_variable_name}=prom.Gauge(gauge_variable_name, "Response time in seconds")')
             single_url = single_url[0]
@@ -59,9 +64,9 @@ class StartWebserver(object):
                 # having to know it in advance
                 exec(f'{gauge_variable_name}.set(response_time)')
                 if status == "FAILED":
-                    self.fail_metric.labels(failed_attempts=single_url).inc()
+                    self.fail_metric.labels(failed_attempts=metric_name).inc()
                 else:
-                    self.success_metric.labels(success_attempts=single_url).inc()
+                    self.success_metric.labels(success_attempts=metric_name).inc()
                 single_result = "%s --> %s : %s" %(hostname, single_url, status)
                 testing_results += single_result + '\n'
         return testing_results
