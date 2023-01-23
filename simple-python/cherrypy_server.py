@@ -24,22 +24,35 @@ def add_to_dictionary(dictionary, endpoint, component, value=1, overwrite=True):
         dictionary[endpoint] = {component: value}
 
 
-def test_endpoint(incoming_url, port='8080'):
+def test_endpoint(incoming_url, port='8080'):    
+    retry_strategy = requests.adapters.Retry(
+    total=0,
+    status_forcelist=[429, 500, 502, 503, 504],
+    method_whitelist=["HEAD", "GET", "OPTIONS"]
+    )
+    adapter = requests.adapters.HTTPAdapter(max_retries=retry_strategy)
+    http = requests.Session()
+    http.mount("https://", adapter)
+    http.mount("http://", adapter)
+    final_endpoint = incoming_url
     if options.service:
-        final_endpoint = "http://" + incoming_url + ":" + port
-    else:
-        final_endpoint = incoming_url
-    response = requests.request(method='GET', url=final_endpoint)
-    
-    if response.status_code != 200:
-        return ("FAILED", response.elapsed.total_seconds())
-    else:
-        return ("OK", response.elapsed.total_seconds())
+        if not "http://" in incoming_url:
+            final_endpoint = "http://" + incoming_url + ":" + port
+    try:
+        response = http.get(url=final_endpoint, timeout=0.1)
+        if response.status_code != 200:
+            return ("FAILED", response.elapsed.total_seconds())
+        else:
+            return ("OK", response.elapsed.total_seconds())
+    # It's ok if the request fails
+    except:
+        return ("FAILED", 0)
 
 
 class StartWebserver(object):
     fail_metric = prom.Counter('failed_attempts', 'Number of failed attempts', ['failed_attempts'])
     success_metric = prom.Counter('success_attempts', 'Number of successful attempts', ['success_attempts'])
+    gauge_metric=prom.Gauge("response_time", "Response time in seconds", labelnames=["from", "to"])   
     @cherrypy.expose
     def index(self):
         return "Hello world!"
@@ -48,21 +61,19 @@ class StartWebserver(object):
     def demo(self):
         testing_results = ''
         hostname = socket.gethostname().split('-')[0]
+        
         for single_url in options.urls:
-            # metric names cannot use '-' or '/' in the name so we need to remove them
-            if "http" in single_url[0]:
-                metric_name = single_url[0].split("//")[1].split('.')[0].replace('-','_')
-            else:
-                metric_name = single_url[0].replace('-','_').replace(".", "_")
-            gauge_variable_name = "%s_to_%s_response_time" % (hostname.split('-')[0], metric_name)
-            # This is a gnarly work around to set a dynamic name for the response time    
-            exec(f'{gauge_variable_name}=prom.Gauge(gauge_variable_name, "Response time in seconds")')
             single_url = single_url[0]
+            # metric names cannot use '-' or '/' in the name so we need to remove them
+            if "http" in single_url:
+                metric_name = single_url.split("//")[1].split('.')[0].replace('-','_')
+            else:
+                metric_name = single_url.replace('-','_').replace(".", "_")            
             if not hostname in single_url:
                 status, response_time = test_endpoint(single_url)
                 # The same gnarly hack which enables you to call the dynamically created variable name without
                 # having to know it in advance
-                exec(f'{gauge_variable_name}.set(response_time)')
+                self.gauge_metric.labels(hostname, single_url).set(response_time)
                 if status == "FAILED":
                     self.fail_metric.labels(failed_attempts=metric_name).inc()
                 else:
