@@ -33,7 +33,7 @@ image:
   repository: quay.io/sovens/sre-sample-app/simple-cherrypy-server
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.99"
+  tag: "0.99.1"
 
 imagePullSecrets: []
 nameOverride: "example"
