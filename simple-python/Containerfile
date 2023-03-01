@@ -1,6 +1,7 @@
 FROM registry.access.redhat.com/ubi9/ubi
-RUN dnf install -y platform-python-pip python3 && \
-    pip install prometheus_client cherrypy && \
+RUN dnf update -y && \
+    dnf install -y platform-python-pip python3 && \
+    pip install prometheus_client cherrypy opentelemetry-distro && \
     dnf clean all
 
 RUN mkdir -p /app

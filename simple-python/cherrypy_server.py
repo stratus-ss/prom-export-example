@@ -5,6 +5,13 @@ import cherrypy
 import prometheus_client as prom
 import socket
 import argparse
+from opentelemetry import trace
+from opentelemetry import metrics
+tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--urls', nargs='*', dest='urls', action='append')
 parser.add_argument('--service', dest='service', action=argparse.BooleanOptionalAction)
@@ -23,8 +30,9 @@ def add_to_dictionary(dictionary, endpoint, component, value=1, overwrite=True):
     else:
         dictionary[endpoint] = {component: value}
 
-
-def test_endpoint(incoming_url, port='8080'):    
+@tracer.start_as_current_span("endpoint_test")
+def test_endpoint(incoming_url, port='8080'):   
+    current_span = trace.get_current_span()
     retry_strategy = requests.adapters.Retry(
     total=0,
     status_forcelist=[429, 500, 502, 503, 504],
@@ -38,8 +46,10 @@ def test_endpoint(incoming_url, port='8080'):
     if options.service:
         if not "http://" in incoming_url:
             final_endpoint = "http://" + incoming_url + ":" + port
+    current_span.set_attribute("url.name", final_endpoint)
     try:
         response = http.get(url=final_endpoint, timeout=0.1)
+
         if response.status_code != 200:
             return ("FAILED", response.elapsed.total_seconds())
         else:
@@ -50,9 +60,28 @@ def test_endpoint(incoming_url, port='8080'):
 
 
 class StartWebserver(object):
-    fail_metric = prom.Counter('failed_attempts', 'Number of failed attempts', ['failed_attempts'])
-    success_metric = prom.Counter('success_attempts', 'Number of successful attempts', ['success_attempts'])
-    gauge_metric=prom.Gauge("response_time", "Response time in seconds", labelnames=["from", "to"])   
+    def __init__(self) -> None:  
+        def _process_urls(self):
+            url_list = []
+            metric_name_list = []
+            for single_url in options.urls:
+                single_url = single_url[0]
+                # metric names cannot use '-' or '/' in the name so we need to remove them
+                if "http" in single_url:
+                    metric_name = single_url.split("//")[1].split('.')[0].replace('-','_')
+                else:
+                    metric_name = single_url.replace('-','_').replace(".", "_")
+                metric_name_list.append(metric_name)
+                url_list.append(single_url)
+            return (metric_name_list, url_list)
+        self.fail_metric = prom.Counter('failed_attempts', 'Number of failed attempts', ['failed_attempts'])
+        self.success_metric = prom.Counter('success_attempts', 'Number of successful attempts', ['success_attempts'])
+        self.gauge_metric = prom.Gauge("response_time", "Response time in seconds", labelnames=["from", "to"])   
+        self.list_of_metric_names, self.list_of_urls = _process_urls(self)
+        otel_success_metric = meter.create_counter("success")
+    
+    
+
     @cherrypy.expose
     def index(self):
         return "Hello world!"
@@ -61,25 +90,20 @@ class StartWebserver(object):
     def demo(self):
         testing_results = ''
         hostname = socket.gethostname().split('-')[0]
-        
-        for single_url in options.urls:
-            single_url = single_url[0]
-            # metric names cannot use '-' or '/' in the name so we need to remove them
-            if "http" in single_url:
-                metric_name = single_url.split("//")[1].split('.')[0].replace('-','_')
-            else:
-                metric_name = single_url.replace('-','_').replace(".", "_")            
+        index = 0
+        for single_url in self.list_of_urls:
             if not hostname in single_url:
                 status, response_time = test_endpoint(single_url)
                 # The same gnarly hack which enables you to call the dynamically created variable name without
                 # having to know it in advance
                 self.gauge_metric.labels(hostname, single_url).set(response_time)
                 if status == "FAILED":
-                    self.fail_metric.labels(failed_attempts=metric_name).inc()
+                    self.fail_metric.labels(failed_attempts=self.list_of_metric_names[index]).inc()
                 else:
-                    self.success_metric.labels(success_attempts=metric_name).inc()
+                    self.success_metric.labels(success_attempts=self.list_of_metric_names[index]).inc()
                 single_result = "%s --> %s : %s" %(hostname, single_url, status)
                 testing_results += single_result + '\n'
+                index +=1
         return testing_results
 
     @cherrypy.expose
