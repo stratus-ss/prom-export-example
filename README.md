@@ -2,7 +2,7 @@
 
 The respository holds a few sample applications that will generate prometheus style metrics.
 
-**simple-python** is an app based on a Sysdig example from some time ago. It simply publishes random stats in prometheus format so that you can confirm that you know how to scrape an endpoint
+**simple-python** is an app based on a Sysdig example from some time ago. It is based on CherryPy server and it publishes Open Telemetric metrics in prometheus format and also enables rudimentary tracing. It is the primary server example
 
 **simple-http-server** was forked from Robert Bohne's OpenShift Examples. It was extended so that it now produces prometheus metrics for number of success/failures as well as stats that curl gathers
 
